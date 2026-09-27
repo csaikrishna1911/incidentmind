@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { recallSimilarIncidents, sanitizeErrorMessage } from "@/lib/hindsight";
-import type { RecallSimilarIncidentsInput } from "@/lib/hindsight";
+import { reflectOnIncident, sanitizeErrorMessage } from "@/lib/hindsight";
 
 export async function POST(request: Request) {
   try {
@@ -21,9 +20,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { query, limit, tags } = body as {
+    const { query, context, tags } = body as {
       query: unknown;
-      limit?: unknown;
+      context?: unknown;
       tags?: unknown;
     };
 
@@ -34,18 +33,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const input: RecallSimilarIncidentsInput = {
+    const result = await reflectOnIncident({
       query: query.trim(),
-      limit: typeof limit === "number" ? limit : undefined,
+      context: typeof context === "string" ? context : undefined,
       tags: Array.isArray(tags) ? (tags as string[]) : undefined,
-    };
-
-    const result = await recallSimilarIncidents(input);
-
-    return NextResponse.json({
-      success: true,
-      memories: result.memories,
     });
+
+    return NextResponse.json(result);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(

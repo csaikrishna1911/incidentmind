@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getHindsightClient, getHindsightBankId } from "@/lib/hindsight";
+import { retainIncident, sanitizeErrorMessage } from "@/lib/hindsight";
+import type { IncidentMemoryInput } from "@/lib/hindsight";
 
 export async function POST(request: Request) {
   try {
@@ -13,41 +14,50 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!body || typeof body !== "object" || !("content" in body)) {
+    if (!body || typeof body !== "object") {
       return NextResponse.json(
-        { success: false, error: "Missing required 'content' field in request body" },
+        { success: false, error: "Request body must be an object" },
         { status: 400 }
       );
     }
 
-    const { content } = body as { content: unknown };
+    const payload = body as Record<string, unknown>;
 
-    if (typeof content !== "string" || content.trim().length === 0) {
+    // Support both backward-compatible { content: "..." } and structured IncidentMemoryInput
+    if ("content" in payload) {
+      if (typeof payload.content !== "string" || payload.content.trim().length === 0) {
+        return NextResponse.json(
+          { success: false, error: "The 'content' field must be a non-empty string" },
+          { status: 400 }
+        );
+      }
+      const result = await retainIncident(payload.content.trim());
+      return NextResponse.json({
+        success: true,
+        itemsCount: result.itemsCount,
+      });
+    } else if ("incidentId" in payload) {
+      if (typeof payload.incidentId !== "string" || payload.incidentId.trim().length === 0) {
+        return NextResponse.json(
+          { success: false, error: "The 'incidentId' field must be a non-empty string" },
+          { status: 400 }
+        );
+      }
+      const result = await retainIncident(payload as unknown as IncidentMemoryInput);
+      return NextResponse.json({
+        success: true,
+        itemsCount: result.itemsCount,
+      });
+    } else {
       return NextResponse.json(
-        { success: false, error: "The 'content' field must be a non-empty string" },
+        { success: false, error: "Missing required 'content' or 'incidentId' in request body" },
         { status: 400 }
       );
     }
-
-    const bankId = getHindsightBankId();
-    const client = getHindsightClient();
-
-    const result = await client.retain(bankId, content.trim());
-
-    return NextResponse.json({
-      success: true,
-      itemsCount: result.items_count,
-    });
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    // Sanitize any accidental API key leakage
-    const apiKey = process.env.HINDSIGHT_API_KEY;
-    const sanitizedMessage = apiKey && apiKey !== "PASTE_THE_REAL_KEY_HERE"
-      ? rawMessage.replaceAll(apiKey, "[REDACTED]")
-      : rawMessage;
-
     return NextResponse.json(
-      { success: false, error: sanitizedMessage },
+      { success: false, error: sanitizeErrorMessage(rawMessage) },
       { status: 500 }
     );
   }

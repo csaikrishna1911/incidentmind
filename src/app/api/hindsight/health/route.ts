@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getHindsightClient, getHindsightBankId } from "@/lib/hindsight";
+import {
+  getHindsightClient,
+  getHindsightBankId,
+  sanitizeErrorMessage,
+} from "@/lib/hindsight";
 
 export async function GET() {
   try {
@@ -39,16 +43,11 @@ export async function GET() {
     });
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    const apiKey = process.env.HINDSIGHT_API_KEY;
-    const sanitizedMessage = apiKey && apiKey !== "PASTE_THE_REAL_KEY_HERE"
-      ? rawMessage.replaceAll(apiKey, "[REDACTED]")
-      : rawMessage;
-
     return NextResponse.json(
       {
         success: false,
         configured: false,
-        error: sanitizedMessage,
+        error: sanitizeErrorMessage(rawMessage),
       },
       { status: 500 }
     );

@@ -4,8 +4,8 @@ let clientInstance: HindsightClient | null = null;
 
 /**
  * Returns a reusable singleton instance of the HindsightClient.
- * Reads HINDSIGHT_BASE_URL and HINDSIGHT_API_KEY from environment variables.
- * Only runs on the server.
+ * Validates that required environment variables exist.
+ * Keeps credentials strictly server-side.
  */
 export function getHindsightClient(): HindsightClient {
   if (typeof window !== "undefined") {
@@ -50,4 +50,15 @@ export function getHindsightBankId(): string {
     );
   }
   return bankId;
+}
+
+/**
+ * Sanitizes any potential API key leakage from error messages.
+ */
+export function sanitizeErrorMessage(rawMessage: string): string {
+  const apiKey = process.env.HINDSIGHT_API_KEY;
+  if (apiKey && apiKey !== "PASTE_THE_REAL_KEY_HERE") {
+    return rawMessage.replaceAll(apiKey, "[REDACTED]");
+  }
+  return rawMessage;
 }
