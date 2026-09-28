@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { hindsight, BANK_ID } from "@/lib/hindsight";
 
 /**
  * GET /api/incidents/[id]/postmortem
@@ -106,7 +107,75 @@ export async function POST(request, { params }) {
     );
   }
 
-  return NextResponse.json(data, { status: 201 });
+  // --- Store the learning in Hindsight (non-blocking on failure) ---
+  // The postmortem is already saved in Supabase above. Now we also
+  // store it as a persistent memory in Hindsight so future incidents
+  // can benefit from what was learned.
+  let hindsightStatus = "skipped";
+
+  if (hindsight) {
+    try {
+      // Fetch the parent incident to include title/service/severity in the memory
+      const { data: incidentDetails } = await supabase
+        .from("incidents")
+        .select("title, service, severity, description, resolved_at, created_at")
+        .eq("id", id)
+        .single();
+
+      // Build a structured memory string
+      const memoryParts = [];
+
+      if (incidentDetails) {
+        memoryParts.push(`Incident: ${incidentDetails.title}`);
+        memoryParts.push(`Service: ${incidentDetails.service}`);
+        memoryParts.push(`Severity: ${incidentDetails.severity}`);
+        if (incidentDetails.description) {
+          memoryParts.push(`Description: ${incidentDetails.description}`);
+        }
+        // Calculate resolution time if both timestamps exist
+        if (incidentDetails.resolved_at && incidentDetails.created_at) {
+          const created = new Date(incidentDetails.created_at);
+          const resolved = new Date(incidentDetails.resolved_at);
+          const diffMs = resolved - created;
+          const diffMins = Math.round(diffMs / 60000);
+          if (diffMins > 0) {
+            memoryParts.push(`Resolution Time: ${diffMins} minutes`);
+          }
+        }
+      }
+
+      if (data.root_cause) {
+        memoryParts.push(`Root Cause: ${data.root_cause}`);
+      }
+      if (data.what_worked) {
+        memoryParts.push(`What Worked: ${data.what_worked}`);
+      }
+      if (data.what_failed) {
+        memoryParts.push(`What Failed: ${data.what_failed}`);
+      }
+      if (data.lessons_learned) {
+        memoryParts.push(`Lessons Learned: ${data.lessons_learned}`);
+      }
+
+      const memoryText = memoryParts.join("\n");
+
+      await hindsight.retain(BANK_ID, memoryText);
+      hindsightStatus = "stored";
+    } catch (hindsightErr) {
+      // Hindsight failed — but the postmortem is already safely in Supabase.
+      // Log the error and continue. Do NOT delete the Supabase postmortem.
+      console.error("Hindsight retain failed (postmortem is safe in Supabase):", hindsightErr);
+      hindsightStatus = "failed";
+    }
+  }
+
+  return NextResponse.json(
+    {
+      ...data,
+      hindsight_memory: hindsightStatus,
+    },
+    { status: 201 }
+  );
 }
 
 /**
