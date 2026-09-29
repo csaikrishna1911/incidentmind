@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { hindsight, BANK_ID } from "@/lib/hindsight";
 
 /**
  * GET /api/incidents
@@ -107,5 +108,56 @@ export async function POST(request) {
     );
   }
 
-  return NextResponse.json(data, { status: 201 });
+  // --- Search Hindsight for similar past incidents (non-blocking on failure) ---
+  // The incident is already saved in Supabase. Now we search Hindsight
+  // to see if similar incidents have happened before.
+  let similar_incidents = [];
+  let memory_status = "skipped";
+
+  if (hindsight) {
+    try {
+      // Build a recall query from the incident details
+      const queryParts = [data.title];
+      if (data.service) {
+        queryParts.push(`service: ${data.service}`);
+      }
+      if (data.description) {
+        queryParts.push(data.description);
+      }
+      queryParts.push(`severity: ${data.severity}`);
+
+      const recallQuery = queryParts.join(". ");
+
+      const results = await hindsight.recall(BANK_ID, recallQuery);
+
+      // Normalize the response into a consistent format
+      if (Array.isArray(results)) {
+        similar_incidents = results.map((item) => ({
+          text: item.text || item.content || item.memory || String(item),
+          score: item.score ?? item.relevance ?? null,
+        }));
+      } else if (results && typeof results === "object") {
+        const items = results.memories || results.results || results.data || [];
+        similar_incidents = items.map((item) => ({
+          text: item.text || item.content || item.memory || String(item),
+          score: item.score ?? item.relevance ?? null,
+        }));
+      }
+
+      memory_status = "recalled";
+    } catch (recallErr) {
+      // Hindsight failed — the incident is still safely saved in Supabase.
+      console.error("Hindsight recall failed (incident is safe in Supabase):", recallErr);
+      memory_status = "failed";
+    }
+  }
+
+  return NextResponse.json(
+    {
+      incident: data,
+      similar_incidents,
+      memory_status,
+    },
+    { status: 201 }
+  );
 }

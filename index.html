@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecallOps — AI Incident Response Agent</title>
+  <meta name="description" content="RecallOps uses Hindsight memory to recall previous production incidents and power faster resolutions with AI-driven recommendations.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- App Shell -->
+  <div class="app-layout" id="app-layout">
+
+    <!-- 1. SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon-wrapper">
+            <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" />
+              <path d="M17 12a5 5 0 0 1-5 5" stroke-dasharray="2 2" />
+            </svg>
+            <span class="pulse-ring"></span>
+          </div>
+          <div class="brand-text">
+            <div class="brand-name">Recall<span class="gradient-text">Ops</span></div>
+            <div class="brand-subtitle">AI Incident Response</div>
+          </div>
+        </div>
+        <button class="icon-btn sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="incidents" id="nav-incidents">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span class="nav-label">Incidents</span>
+          <span class="nav-badge" id="nav-incidents-badge">3 Active</span>
+        </button>
+
+        <button class="nav-item" data-view="memory" id="nav-memory">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z"></path>
+            <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z"></path>
+          </svg>
+          <span class="nav-label">Memory</span>
+          <span class="nav-pill" id="nav-memory-count">482</span>
+        </button>
+
+        <button class="nav-item" data-view="runbooks" id="nav-runbooks">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <line x1="9" y1="7" x2="15" y2="7"></line>
+            <line x1="9" y1="11" x2="15" y2="11"></line>
+          </svg>
+          <span class="nav-label">Runbooks</span>
+        </button>
+
+        <button class="nav-item" data-view="postmortems" id="nav-postmortems">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <line x1="10" y1="9" x2="8" y2="9"></line>
+          </svg>
+          <span class="nav-label">Post-Mortems</span>
+        </button>
+
+        <button class="nav-item" data-view="learning" id="nav-learning">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span class="nav-label">Learning</span>
+          <span class="nav-tag">+89%</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Status Card -->
+      <div class="sidebar-status-card">
+        <div class="status-card-header">
+          <span class="status-indicator-dot online"></span>
+          <span class="status-card-title">Hindsight Memory Engine</span>
+        </div>
+        <div class="status-metric-row">
+          <span class="metric-label">Incident Recall Index</span>
+          <span class="metric-value">99.1%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: 89%"></div>
+        </div>
+        <div class="status-card-footer">
+          <span>Memories: <strong>482</strong></span>
+          <span class="latency-pill">8ms recall</span>
+        </div>
+      </div>
+
+      <!-- User Profile / Session -->
+      <div class="sidebar-user">
+        <div class="user-avatar">SRE</div>
+        <div class="user-info">
+          <div class="user-name">On-Call Engineer</div>
+          <div class="user-role">Platform Team · Active</div>
+        </div>
+        <button class="icon-btn mini" id="btn-quick-reset" title="Reset Demo Session">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M3 21v-5h5"></path>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+
+      <!-- Top App Bar -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="mobile-toggle-btn icon-btn" id="mobile-menu-btn" aria-label="Open Navigation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="header-title-group">
+            <h1 class="header-title" id="page-title">Incidents</h1>
+            <span class="header-badge" id="memory-status-badge">
+              <span class="status-dot"></span>
+              <span class="badge-text">Hindsight Active</span>
+            </span>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="incident-summary-header" id="incident-summary-header">
+            <span class="inc-sum-pill critical">1 Critical</span>
+            <span class="inc-sum-pill active">3 Active</span>
+            <span class="inc-sum-pill resolved">8 Resolved Today</span>
+          </div>
+          <button class="action-btn primary-btn" id="btn-new-incident">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span class="btn-text">New Incident</span>
+          </button>
+          <div class="api-mode-pill" id="api-mode-indicator" title="RecallOps Hindsight Memory Status">
+            <span class="pill-dot"></span>
+            <span class="pill-text">Local Simulator</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW 1: INCIDENTS LIST + DETAIL -->
+      <section class="view-panel active-view" id="view-incidents">
+        <div class="incidents-workspace">
+
+          <!-- LEFT: Incident List -->
+          <div class="incident-list-column" id="incident-list-column">
+            <div class="incident-list-header">
+              <span class="list-section-label">Active Incidents</span>
+            </div>
+            <div id="incident-list-container"></div>
+            <div class="incident-list-divider"><span>Resolved Today</span></div>
+            <div id="resolved-list-container"></div>
+          </div>
+
+          <!-- RIGHT: Incident Detail Panel -->
+          <div class="incident-detail-column" id="incident-detail-column">
+            <div class="incident-empty-state" id="incident-empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <h3>Select an incident</h3>
+              <p>Choose an incident from the list to view AI recommendations powered by Hindsight memory.</p>
+            </div>
+
+            <div class="incident-detail-content hidden" id="incident-detail-content">
+              <!-- Incident Header -->
+              <div class="inc-detail-header">
+                <div class="inc-detail-meta">
+                  <div class="inc-id-row">
+                    <span class="inc-id-label" id="detail-inc-id">INC-1042</span>
+                    <span class="inc-severity-badge" id="detail-severity-badge">🔴 Critical</span>
+                    <span class="inc-status-badge" id="detail-status-badge">Investigating</span>
+                  </div>
+                  <div class="inc-service-name" id="detail-service">Payment API</div>
+                  <div class="inc-title-main" id="detail-title">Database Connection Timeout</div>
+                </div>
+                <div class="inc-detail-actions">
+                  <button class="action-btn primary-btn" id="btn-resolve-incident">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>Resolve Incident</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- What's Happening -->
+              <div class="inc-section-card">
+                <div class="inc-section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sec-icon">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  What's Happening?
+                </div>
+                <div class="inc-metrics-row" id="detail-metrics-row"></div>
+                <details class="logs-expander">
+                  <summary class="logs-summary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mini-icon">
+                      <polyline points="4 17 10 11 4 5"></polyline>
+                      <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                    View Logs
+                  </summary>
+                  <div class="logs-content" id="detail-logs"></div>
+                </details>
+              </div>
+
+              <!-- AI Recommendation - CENTER PIECE -->
+              <div class="ai-recommendation-card" id="ai-rec-card">
+                <div class="ai-rec-header">
+                  <div class="ai-rec-title-row">
+                    <span class="ai-rec-sparkle">✦</span>
+                    <span class="ai-rec-title">AI Recommendation</span>
+                    <button class="ai-memory-badge" id="ai-memory-badge">
+                      🧠 <span id="ai-memory-count">3</span> memories used
+                    </button>
+                  </div>
+                  <div class="ai-confidence-row">
+                    <span class="confidence-label">Confidence</span>
+                    <span class="confidence-value" id="ai-confidence">92%</span>
+                  </div>
+                </div>
+                <div class="ai-rec-seen-before">We've seen something similar before.</div>
+                <div class="ai-rec-text" id="ai-rec-text">
+                  Check the database connection pool and verify whether a recent deployment caused connection exhaustion.
+                </div>
+                <div class="ai-rec-source" id="ai-rec-source">
+                  🧠 Based on <strong id="ai-based-on-count">3</strong> previous incidents
+                </div>
+                <div class="ai-rec-actions">
+                  <button class="action-btn secondary-btn" id="btn-view-why">View Why</button>
+                  <button class="action-btn secondary-btn" id="btn-view-runbook-from-inc">View Runbook</button>
+                </div>
+                <!-- Memory Popup -->
+                <div class="memory-used-popup hidden" id="memory-used-popup">
+                  <div class="mem-popup-header">MEMORIES USED</div>
+                  <div id="memory-used-list"></div>
+                </div>
+              </div>
+
+              <!-- Similar Incidents (Hindsight Memory) -->
+              <div class="inc-section-card">
+                <div class="inc-section-title">
+                  <span>🧠</span>
+                  Similar Incidents
+                  <span class="sim-count-badge" id="similar-count-badge">3 found</span>
+                </div>
+                <div id="similar-incidents-list"></div>
+              </div>
+
+              <!-- Why This Recommendation -->
+              <details class="why-rec-expander" id="why-rec-expander">
+                <summary class="why-rec-summary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mini-icon">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  Why this recommendation?
+                </summary>
+                <div class="why-rec-content" id="why-rec-content"></div>
+              </details>
+
+              <!-- Incident Timeline -->
+              <div class="inc-section-card">
+                <div class="inc-section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sec-icon">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  Incident Timeline
+                </div>
+                <div class="inc-timeline" id="inc-timeline-list"></div>
+              </div>
+
+              <!-- AI Chat within Incident Context -->
+              <div class="inc-section-card inc-chat-section">
+                <div class="inc-section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sec-icon">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Ask the Agent
+                </div>
+                <div class="inc-chat-messages" id="inc-chat-messages">
+                  <div class="inc-chat-hint">Ask about this incident, similar past incidents, or request clarification on the recommendation.</div>
+                </div>
+                <div class="inc-chat-input-row">
+                  <input type="text" id="inc-chat-input" class="inc-chat-input" placeholder="e.g. Why do you think this is a connection pool issue?">
+                  <button class="send-btn compact" id="btn-send-inc-chat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="send-icon">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: MEMORY -->
+      <section class="view-panel" id="view-memory">
+        <div class="memories-page-container">
+          <div class="memories-controls-card">
+            <div class="memories-header-top">
+              <div>
+                <h2 class="section-title">Incident Memory Bank</h2>
+                <p class="section-subtitle">Knowledge learned from previous incidents — root causes, resolutions, and post-mortem lessons that power AI recommendations.</p>
+              </div>
+              <div class="memories-actions">
+                <button class="action-btn primary-btn" id="btn-open-add-memory">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Add Memory</span>
+                </button>
+              </div>
+            </div>
+            <div class="memories-toolbar">
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="memory-search-input" class="search-input" placeholder="Search incidents, root causes, resolutions..." />
+                <button class="clear-search-btn hidden" id="btn-clear-search">x</button>
+              </div>
+              <div class="category-pills" id="memory-category-pills">
+                <button class="cat-pill active" data-category="all">All (<span id="count-all">10</span>)</button>
+                <button class="cat-pill" data-category="incident">Past Incidents (<span id="count-user">3</span>)</button>
+                <button class="cat-pill" data-category="root_cause">Root Causes (<span id="count-pref">2</span>)</button>
+                <button class="cat-pill" data-category="resolution">Resolutions (<span id="count-inter">3</span>)</button>
+                <button class="cat-pill" data-category="lesson">Lessons (<span id="count-sol">2</span>)</button>
+              </div>
+            </div>
+            <div class="memory-quick-stats">
+              <div class="qstat-item">
+                <span class="qstat-val" id="stat-total-stored">482</span>
+                <span class="qstat-name">Total Memories</span>
+              </div>
+              <div class="qstat-divider"></div>
+              <div class="qstat-item">
+                <span class="qstat-val">126</span>
+                <span class="qstat-name">Incidents Learned</span>
+              </div>
+              <div class="qstat-divider"></div>
+              <div class="qstat-item">
+                <span class="qstat-val">89</span>
+                <span class="qstat-name">Recommendations</span>
+              </div>
+              <div class="qstat-divider"></div>
+              <div class="qstat-item">
+                <span class="qstat-val">94%</span>
+                <span class="qstat-name">Avg Confidence</span>
+              </div>
+            </div>
+          </div>
+          <div class="memories-grid" id="memories-grid"></div>
+          <div class="empty-state hidden" id="memories-empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <h3>No matching memories found</h3>
+            <p>Try searching for different terms or switch category filters.</p>
+            <button class="action-btn secondary-btn" id="btn-reset-filters">Reset Filters</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: RUNBOOKS -->
+      <section class="view-panel" id="view-runbooks">
+        <div class="runbooks-container">
+          <div class="runbooks-header">
+            <div>
+              <h2 class="section-title">Runbooks</h2>
+              <p class="section-subtitle">Proven resolution playbooks derived from successfully resolved incidents.</p>
+            </div>
+          </div>
+          <div id="runbooks-main-view">
+            <div class="runbooks-list" id="runbooks-list"></div>
+          </div>
+          <div class="runbook-detail-panel hidden" id="runbook-detail-panel">
+            <div class="runbook-detail-header">
+              <button class="action-btn ghost-btn" id="btn-back-runbooks">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                Back to Runbooks
+              </button>
+              <h3 id="runbook-detail-title">Database Connection Exhaustion</h3>
+              <div class="runbook-detail-meta" id="runbook-detail-meta"></div>
+            </div>
+            <div id="runbook-detail-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: POST-MORTEMS -->
+      <section class="view-panel" id="view-postmortems">
+        <div class="postmortem-container">
+          <div class="postmortem-header">
+            <div>
+              <h2 class="section-title">Post-Mortem</h2>
+              <p class="section-subtitle">Capture what happened so the agent can learn from it. Every post-mortem becomes a memory that improves future recommendations.</p>
+            </div>
+          </div>
+          <div class="postmortem-flow-banner">
+            <span class="flow-item">Incident</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-item">Resolution</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-item active">Post-Mortem</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-item">Hindsight Memory</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-item">Better Future Response</span>
+          </div>
+          <div class="postmortem-form-card">
+            <form id="form-postmortem">
+              <div class="form-group">
+                <label for="pm-incident" class="input-label">Incident ID / Name</label>
+                <input type="text" id="pm-incident" class="form-input" placeholder="e.g. INC-1042 — Payment API DB Timeout" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group half">
+                  <label for="pm-service" class="input-label">Affected Service</label>
+                  <input type="text" id="pm-service" class="form-input" placeholder="e.g. Payment API">
+                </div>
+                <div class="form-group half">
+                  <label for="pm-severity" class="input-label">Severity</label>
+                  <select id="pm-severity" class="form-input">
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="pm-root-cause" class="input-label">Root Cause</label>
+                <textarea id="pm-root-cause" class="form-input" rows="3" placeholder="What was the underlying cause of this incident?" required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="pm-what-fixed" class="input-label">What Fixed It?</label>
+                <textarea id="pm-what-fixed" class="form-input" rows="3" placeholder="Describe the resolution steps that successfully resolved the incident." required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="pm-what-failed" class="input-label">What Didn't Work?</label>
+                <textarea id="pm-what-failed" class="form-input" rows="2" placeholder="Approaches that were tried but failed or made things worse."></textarea>
+              </div>
+              <div class="form-group">
+                <label for="pm-lessons" class="input-label">Lessons Learned</label>
+                <textarea id="pm-lessons" class="form-input" rows="3" placeholder="Key takeaways to prevent this from happening again." required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="pm-preventive" class="input-label">Preventive Actions</label>
+                <textarea id="pm-preventive" class="form-input" rows="2" placeholder="Action items to prevent recurrence (alerts, config changes, runbook updates)."></textarea>
+              </div>
+              <div class="form-group">
+                <label for="pm-runbook" class="input-label">Runbook Used (if any)</label>
+                <input type="text" id="pm-runbook" class="form-input" placeholder="e.g. Database Connection Exhaustion Runbook">
+              </div>
+              <div class="modal-footer" style="padding:0;border:none;margin-top:1.25rem;">
+                <button type="button" class="action-btn secondary-btn" id="btn-clear-pm">Clear Form</button>
+                <button type="submit" class="action-btn primary-btn" id="btn-save-postmortem">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z"></path>
+                    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z"></path>
+                  </svg>
+                  Save to Memory
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 5: LEARNING -->
+      <section class="view-panel" id="view-learning">
+        <div class="insights-container">
+          <div class="insights-header">
+            <div>
+              <h2 class="section-title">The Agent Learns</h2>
+              <p class="section-subtitle">Every resolved incident becomes knowledge for future incidents. Powered by Hindsight memory.</p>
+            </div>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-card-header">
+                <span class="metric-title">Incidents Learned From</span>
+                <div class="metric-icon-box blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-value-huge" id="insight-incidents-learned">126</div>
+              <div class="metric-delta positive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>Across all services</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-card-header">
+                <span class="metric-title">Memories Stored</span>
+                <div class="metric-icon-box purple">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-value-huge" id="insight-memories-stored">482</div>
+              <div class="metric-delta positive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>Root causes, resolutions, lessons</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-card-header">
+                <span class="metric-title">Successful Recommendations</span>
+                <div class="metric-icon-box emerald">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                    <polyline points="17 6 23 6 23 12"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-value-huge" id="insight-recommendations">89</div>
+              <div class="metric-delta positive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>Accepted by on-call engineers</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-card-header">
+                <span class="metric-title">Avg Time Saved</span>
+                <div class="metric-icon-box cyan">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-value-huge" id="insight-time-saved">41%</div>
+              <div class="metric-delta positive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>vs. agent without memory</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-card-header">
+                <span class="metric-title">Avg Recall Confidence</span>
+                <div class="metric-icon-box amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-value-huge" id="insight-confidence">94%</div>
+              <div class="metric-delta positive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                <span>Similarity match on retrieval</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Learning Flow -->
+          <div class="evolution-timeline-section">
+            <div class="evolution-header">
+              <div>
+                <h3 class="evolution-title">How The Agent Learns</h3>
+                <p class="evolution-subtitle">Every incident trains the agent to respond better next time.</p>
+              </div>
+            </div>
+            <div class="learning-flow-diagram">
+              <div class="lf-step"><div class="lf-icon critical-icon">🚨</div><div class="lf-label">Incident</div></div>
+              <div class="lf-arrow">↓</div>
+              <div class="lf-step"><div class="lf-icon">✅</div><div class="lf-label">Resolution</div></div>
+              <div class="lf-arrow">↓</div>
+              <div class="lf-step"><div class="lf-icon">📋</div><div class="lf-label">Post-Mortem</div></div>
+              <div class="lf-arrow">↓</div>
+              <div class="lf-step"><div class="lf-icon">🧠</div><div class="lf-label">Hindsight Memory</div></div>
+              <div class="lf-arrow">↓</div>
+              <div class="lf-step lf-highlight"><div class="lf-icon">✦</div><div class="lf-label">Better Recommendation</div></div>
+            </div>
+
+            <div class="before-after-section">
+              <h3 class="evolution-title" style="margin-bottom:1rem;">Without Memory vs. With Hindsight</h3>
+              <div class="deepdive-grid">
+                <div class="deepdive-pane before">
+                  <h5>Without Memory</h5>
+                  <div class="response-quote">"Check the logs and database configuration."</div>
+                  <span class="response-label generic-label">Generic response</span>
+                  <ul class="comparison-list" style="margin-top:1rem;">
+                    <li>❌ No context on previous similar incidents</li>
+                    <li>❌ Generic troubleshooting advice</li>
+                    <li>❌ Engineer must investigate from scratch</li>
+                    <li>❌ Longer mean time to resolution</li>
+                  </ul>
+                </div>
+                <div class="deepdive-pane after">
+                  <h5>With Hindsight Memory</h5>
+                  <div class="response-quote memory-powered">"This resembles INC-0871. The previous incident was caused by connection pool exhaustion. Increasing the pool and restarting the service successfully resolved it in 11 minutes."</div>
+                  <span class="response-label memory-label">Memory-powered response</span>
+                  <ul class="comparison-list" style="margin-top:1rem;">
+                    <li>✅ Recalls 3 similar past incidents (94% match)</li>
+                    <li>✅ References proven resolution steps</li>
+                    <li>✅ Surfaces failed approaches to avoid</li>
+                    <li>✅ 41% faster mean time to resolution</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-row">
+            <div class="chart-card">
+              <h4 class="chart-title">Memory Category Distribution</h4>
+              <div class="donut-chart-wrapper">
+                <div class="donut-svg-container">
+                  <svg viewBox="0 0 100 100" class="donut-svg">
+                    <circle cx="50" cy="50" r="40" class="donut-bg" />
+                    <circle cx="50" cy="50" r="40" class="donut-segment seg-blue"    stroke-dasharray="63 188" stroke-dashoffset="0" />
+                    <circle cx="50" cy="50" r="40" class="donut-segment seg-amber"   stroke-dasharray="49 202" stroke-dashoffset="-63" />
+                    <circle cx="50" cy="50" r="40" class="donut-segment seg-emerald" stroke-dasharray="71 180" stroke-dashoffset="-112" />
+                    <circle cx="50" cy="50" r="40" class="donut-segment seg-purple"  stroke-dasharray="33 218" stroke-dashoffset="-183" />
+                    <circle cx="50" cy="50" r="40" class="donut-segment seg-cyan"    stroke-dasharray="25 226" stroke-dashoffset="-216" />
+                  </svg>
+                  <div class="donut-center-text">
+                    <span class="donut-num">482</span>
+                    <span class="donut-sub">Memories</span>
+                  </div>
+                </div>
+                <div class="chart-legend">
+                  <div class="legend-item"><span class="legend-color seg-blue"></span> Past Incidents (126)</div>
+                  <div class="legend-item"><span class="legend-color seg-amber"></span> Root Causes (98)</div>
+                  <div class="legend-item"><span class="legend-color seg-emerald"></span> Resolutions (142)</div>
+                  <div class="legend-item"><span class="legend-color seg-purple"></span> Runbooks (67)</div>
+                  <div class="legend-item"><span class="legend-color seg-cyan"></span> Lessons (49)</div>
+                </div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h4 class="chart-title">Recommendation Confidence Over Time</h4>
+              <div class="bar-chart-visual">
+                <div class="bar-group">
+                  <div class="bar-label">Month 1 (0 incidents learned)</div>
+                  <div class="bar-track"><div class="bar-value-fill red-fill" style="width:100%">No recommendation</div></div>
+                  <span class="bar-stat">Cold start</span>
+                </div>
+                <div class="bar-group">
+                  <div class="bar-label">Month 2 (18 incidents learned)</div>
+                  <div class="bar-track"><div class="bar-value-fill amber-fill" style="width:55%">Basic guidance</div></div>
+                  <span class="bar-stat">62% confidence</span>
+                </div>
+                <div class="bar-group">
+                  <div class="bar-label">Month 3 (67 incidents learned)</div>
+                  <div class="bar-track"><div class="bar-value-fill blue-fill" style="width:78%">Specific runbooks</div></div>
+                  <span class="bar-stat">81% confidence</span>
+                </div>
+                <div class="bar-group">
+                  <div class="bar-label">Current (126 incidents learned)</div>
+                  <div class="bar-track"><div class="bar-value-fill emerald-fill" style="width:94%">Memory-powered</div></div>
+                  <span class="bar-stat">94% confidence</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: NEW INCIDENT -->
+  <div class="modal-overlay hidden" id="modal-new-incident">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon-badge">🚨</span>
+          <h3>New Incident</h3>
+        </div>
+        <button class="icon-btn mini" id="btn-close-new-incident-modal">x</button>
+      </div>
+      <form id="form-new-incident" class="modal-form">
+        <div class="form-group">
+          <label for="ni-service" class="input-label">Service</label>
+          <input type="text" id="ni-service" class="form-input" placeholder="e.g. Payment API, Auth Service" required>
+        </div>
+        <div class="form-group">
+          <label for="ni-severity" class="input-label">Severity</label>
+          <select id="ni-severity" class="form-input" required>
+            <option value="" disabled selected>Select severity</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ni-description" class="input-label">What's happening?</label>
+          <textarea id="ni-description" class="form-input" rows="4" placeholder="Describe the symptoms, errors, or anomalies you are observing..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="ni-logs" class="input-label">Add Logs <span class="optional-label">(optional)</span></label>
+          <textarea id="ni-logs" class="form-input mono-input" rows="3" placeholder="Paste relevant log snippets here..."></textarea>
+        </div>
+        <div class="analysis-progress hidden" id="analysis-progress">
+          <div class="analysis-step active" id="step-1"><span class="step-dot"></span><span id="step-1-text">Understanding symptoms...</span></div>
+          <div class="analysis-step" id="step-2"><span class="step-dot"></span><span id="step-2-text">Searching incident memory...</span></div>
+          <div class="analysis-step" id="step-3"><span class="step-dot"></span><span id="step-3-text">Generating recommendation...</span></div>
+        </div>
+        <div class="modal-footer" id="new-incident-footer">
+          <button type="button" class="action-btn secondary-btn" id="btn-cancel-new-incident">Cancel</button>
+          <button type="submit" class="action-btn primary-btn" id="btn-analyze-incident">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z"></path>
+              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z"></path>
+            </svg>
+            Analyze Incident
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD MEMORY -->
+  <div class="modal-overlay hidden" id="modal-add-memory">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon-badge">🧠</span>
+          <h3>Add Incident Memory</h3>
+        </div>
+        <button class="icon-btn mini" id="btn-close-modal">x</button>
+      </div>
+      <form id="form-add-memory" class="modal-form">
+        <div class="form-group">
+          <label for="mem-category" class="input-label">Memory Type</label>
+          <select id="mem-category" class="form-input" required>
+            <option value="incident">Past Incident</option>
+            <option value="root_cause">Root Cause</option>
+            <option value="resolution">Successful Resolution</option>
+            <option value="lesson">Lesson Learned</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="mem-title" class="input-label">Memory Title</label>
+          <input type="text" id="mem-title" class="form-input" placeholder="e.g. DB Connection Pool Exhaustion" required>
+        </div>
+        <div class="form-group">
+          <label for="mem-description" class="input-label">Description &amp; Context</label>
+          <textarea id="mem-description" class="form-input" rows="3" placeholder="What happened, what caused it, and how was it resolved?" required></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="mem-relevance" class="input-label">Confidence (%)</label>
+            <input type="number" id="mem-relevance" class="form-input" min="50" max="100" value="95" required>
+          </div>
+          <div class="form-group half">
+            <label for="mem-tag" class="input-label">Service Tag</label>
+            <input type="text" id="mem-tag" class="form-input" placeholder="e.g. #payment-api">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="action-btn secondary-btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="action-btn primary-btn">Store in Memory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

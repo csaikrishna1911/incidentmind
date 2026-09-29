@@ -62,3 +62,21 @@ export function sanitizeErrorMessage(rawMessage: string): string {
   }
   return rawMessage;
 }
+
+/**
+ * Compatibility exports for legacy or JavaScript consumers expecting
+ * `import { hindsight, BANK_ID } from "@/lib/hindsight"`.
+ */
+export const BANK_ID = process.env.HINDSIGHT_BANK_ID || "incidentmind";
+
+export const hindsight = new Proxy({} as HindsightClient, {
+  get(_target, prop) {
+    const client = getHindsightClient();
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop];
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
+
